@@ -1,0 +1,1 @@
+# Namecard_bot
