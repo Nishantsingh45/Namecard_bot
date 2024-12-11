@@ -1,0 +1,26 @@
+# Ignore the environment file
+.env
+
+# Ignore Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore virtual environment folder
+venv/
+
+# Ignore local downloads or generated files
+downloads/
+
+# Ignore other system or temporary files
+*.log
+*.tmp
+.DS_Store
+*.swp
+*.swo
+
+# Ignore IDE-specific files and folders
+.vscode/
+.idea/
+*.iml
