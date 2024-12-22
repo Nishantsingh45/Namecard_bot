@@ -141,12 +141,12 @@ def webhook():
                             
                             # Handle button selections
                             if button_id == 'export_list':
-                                response_message =f"📤 Click here to export your contact list: /api/contacts/{from_number}/export"
+                                response_message =f"📤 Click here to export your contact list: https://namecard-bot.vercel.app/api/contacts/{from_number}/export"
                                 send_interactive_menu(from_number, response_message)
                             elif button_id == 'send_image':
                                 MetaWhatsAppService.send_whatsapp_message(from_number, "Please Provide your Business Card Image to get the contact details")
                             elif button_id == 'view_list':
-                                response_message =f"📤 Click here to view your contact list: /api/contacts/{from_number}"
+                                response_message =f"📤 Click here to view your contact list: https://namecard-bot.vercel.app/api/contacts/{from_number}"
                                 send_interactive_menu(from_number, response_message)
                     
                     else:
