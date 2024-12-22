@@ -41,8 +41,25 @@ class AINamecardService:
             openai.api_key = Config.OPENAI_API_KEY
             base64_image = encode_image(image_url)
             client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+            # Step 1: Validate if the image is a business card
+            validation_response = client.chat.completions.create(
+                model=Config.OPENAI_MODEL,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Is this image a business card? Respond with 'yes' or 'no'."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                    ]
+                }]
+            )
+
+            is_business_card = validation_response.choices[0].message.content.strip().lower()
+            if is_business_card != "yes":
+                return {"message": "Sorry, we can only process business cards."}
+
+            # Step 2: Extract information if the image is a business card
             response = client.chat.completions.create(
-                response_format={"type": "json_object"},
                 model=Config.OPENAI_MODEL,
                 messages=[{
                     "role": "user",
@@ -52,20 +69,18 @@ class AINamecardService:
                             "name": "Full Name Here",
                             "email": "valid_email@example.com",
                             "contact_number": "phone number of the contact",
-                            "company": "Company Name",
-                           
+                            "company": "Company Name"
                         }'''},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                     ]
                 }]
             )
-            
-            #receipt_text = response.choices[0].message.content
+
             content = json.loads(response.choices[0].message.content)
             return AINamecardService._parse_card_info(content)
         except Exception as e:
             logging.error(f"OpenAI Processing Error: {e}")
-            return None
+            return {"message": "An error occurred while processing the image."}
 
     @staticmethod
     def _parse_card_info(extracted_info):
@@ -74,18 +89,12 @@ class AINamecardService:
         """
         try:
             result = {
-                'name':
-                extracted_info.get('name'),
-                'email':
-                extracted_info.get('email','') ,
-                'contact_number':
-                extracted_info.get('contact_number', ""),
-                'company':
-                extracted_info.get('company')
+                'name': extracted_info.get('name'),
+                'email': extracted_info.get('email', ''),
+                'contact_number': extracted_info.get('contact_number', ""),
+                'company': extracted_info.get('company')
             }
             return result
         except Exception as e:
             logging.error(f"Image Parsing Error: {e}")
-            return None
-
-    
+            return {"message": "An error occurred while parsing the extracted information."}
