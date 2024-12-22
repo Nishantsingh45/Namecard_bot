@@ -41,46 +41,33 @@ class AINamecardService:
             openai.api_key = Config.OPENAI_API_KEY
             base64_image = encode_image(image_url)
             client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
-            # Step 1: Validate if the image is a business card
-            validation_response = client.chat.completions.create(
-                model=Config.OPENAI_MODEL,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "you are given a image which may have business card image or related image .Is this image a business card? Respond with 'yes' or 'no'."},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                    ]
-                }]
-            )
-
-            is_business_card = validation_response.choices[0].message.content.strip().lower()
-            if is_business_card != "yes":
-                return {"message": "Sorry, we can only process business cards."}
-
-            # Step 2: Extract information if the image is a business card
             response = client.chat.completions.create(
+                response_format={"type": "json_object"},
                 model=Config.OPENAI_MODEL,
                 messages=[{
                     "role": "user",
                     "content": [
                         {"type": "text", "text": '''Extract the following information from this image: name, email, contact number, and company. Return a JSON-formatted response.
+                         Note: if you think this is not a business card image, please make is_business_card to No and rest to be empty.
                         {
                             "name": "Full Name Here",
                             "email": "valid_email@example.com",
                             "contact_number": "phone number of the contact",
-                            "company": "Company Name"
+                            "company": "Company Name",
+                            "is_business_card": "yes/no"
+                           
                         }'''},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                     ]
                 }]
             )
-
+            
+            #receipt_text = response.choices[0].message.content
             content = json.loads(response.choices[0].message.content)
             return AINamecardService._parse_card_info(content)
         except Exception as e:
             logging.error(f"OpenAI Processing Error: {e}")
-            return {"message": "An error occurred while processing the image."}
+            return None
 
     @staticmethod
     def _parse_card_info(extracted_info):
@@ -88,13 +75,23 @@ class AINamecardService:
         Parse OpenAI's response into structured data
         """
         try:
+            if extracted_info.get('is_business_card') == 'no':
+                return {
+                    'message': 'This is not a business card image.'
+                }
             result = {
-                'name': extracted_info.get('name'),
-                'email': extracted_info.get('email', ''),
-                'contact_number': extracted_info.get('contact_number', ""),
-                'company': extracted_info.get('company')
+                'name':
+                extracted_info.get('name'),
+                'email':
+                extracted_info.get('email','') ,
+                'contact_number':
+                extracted_info.get('contact_number', ""),
+                'company':
+                extracted_info.get('company')
             }
             return result
         except Exception as e:
             logging.error(f"Image Parsing Error: {e}")
-            return {"message": "An error occurred while parsing the extracted information."}
+            return None
+
+    
