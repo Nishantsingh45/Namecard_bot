@@ -165,6 +165,7 @@ def webhook():
             return jsonify(error=str(e)), 500
 def send_initial_interactive_menu(phone_number):
     """Send initial interactive menu with options"""
+    base_url = "https://namecard-bot.vercel.app/"
     interactive_message = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -178,18 +179,14 @@ def send_initial_interactive_menu(phone_number):
             "action": {
                 "buttons": [
                     {
-                        "type": "reply",
-                        "reply": {
-                            "id": "export_list",
-                            "title": "Export Contact List"
-                        }
+                        "type": "url",
+                        "url": f"{base_url}/api/contacts/{phone_number}/export",
+                        "title": "Export Contacts"
                     },
                     {
-                        "type": "reply",
-                        "reply": {
-                            "id": "view_list",
-                            "title": "View Contact List"
-                        }
+                        "type": "url",
+                        "url": f"{base_url}/api/contacts/{phone_number}",
+                        "title": "View Contacts"
                     },
                     {
                         "type": "reply",
