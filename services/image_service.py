@@ -48,7 +48,7 @@ class AINamecardService:
                 messages=[{
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Is this image a business card? Respond with 'yes' or 'no'."},
+                        {"type": "text", "text": "you are given a image which may have business card image or related image .Is this image a business card? Respond with 'yes' or 'no'."},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                     ]
                 }]

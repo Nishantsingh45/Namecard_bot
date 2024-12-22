@@ -88,7 +88,12 @@ def webhook():
                         db.session.commit()
                     
                     # Send success message
-                    confirmation_msg = f"🎉 Contact Saved Successfully! 🌟\n\n📇 Name: {result.get('name', 'N/A')}\n📧 Email: {result.get('email', 'N/A')}\n📞 Phone: {result.get('contact_number', 'N/A')}\n🏢 Company: {result.get('company', 'N/A')}"
+                    if "message" in result:
+                        error_msg = result["message"]
+                        # Return or display the error message
+                        confirmation_msg = f"❌ {error_msg}"
+                    else:
+                        confirmation_msg = f"🎉 Contact Saved Successfully! 🌟\n\n📇 Name: {result.get('name', 'N/A')}\n📧 Email: {result.get('email', 'N/A')}\n📞 Phone: {result.get('contact_number', 'N/A')}\n🏢 Company: {result.get('company', 'N/A')}"
                     MetaWhatsAppService.send_whatsapp_message(from_number, confirmation_msg)
                 else:
                     MetaWhatsAppService.send_whatsapp_message(from_number, "Sorry, I couldn't process your image. Please try again.")
