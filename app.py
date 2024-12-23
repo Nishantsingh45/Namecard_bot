@@ -9,6 +9,7 @@ from flask import jsonify, send_file
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
+from services.templates import Viewproducts, Exportproducts
 
 def create_app():
     app = Flask(__name__)
@@ -141,14 +142,11 @@ def webhook():
                             
                             # Handle button selections
                             if button_id == 'export_list':
-                                response_message =f"📤 Click here to export your contact list: https://namecard-bot.vercel.app/api/contacts/{from_number}/export"
-                                send_interactive_menu(from_number, response_message)
+                                Exportproducts(from_number)
                             elif button_id == 'send_image':
                                 MetaWhatsAppService.send_whatsapp_message(from_number, "Please Provide your Business Card Image to get the contact details")
                             elif button_id == 'view_list':
-                                response_message =f"📤 Click here to view your contact list: https://namecard-bot.vercel.app/api/contacts/{from_number}"
-                                send_interactive_menu(from_number, response_message)
-                    
+                                Viewproducts(from_number)
                     else:
                         # Initial interaction or text message
                         send_initial_interactive_menu(from_number)
@@ -172,35 +170,39 @@ def send_initial_interactive_menu(phone_number):
         "type": "interactive",
         "interactive": {
             "type": "button",
-            "header": {
-                "type": "text",
-                "text": "Welcome to our service!"
-            },
             "body": {
-                "text": "What would you like to do today?"
-            },
-            "footer": {
-                "text": "Thank you for using our service!"
+                "text": "Welcome! What would you like to do today?"
             },
             "action": {
                 "buttons": [
                     {
-                        "type": "url",
-                        "text": "Exports Contacts",
-                        "url": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}"
+                        "type": "reply",
+                        "reply": {
+                            "id": "export_list",
+                            "title": "Export Contact List"
+                        }
                     },
                     {
-                        "type": "url",
-                        "text": "View Contacts",
-                        "url": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}"
+                        "type": "reply",
+                        "reply": {
+                            "id": "view_list",
+                            "title": "View Contact List"
+                        }
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {
+                            "id": "send_image",
+                            "title": "Business Card Image"
+                        }
                     }
                 ]
             }
         }
     }
-
+    
     # Use your Meta WhatsApp Service to send the message
-    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number, interactive_message)
+    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number,interactive_message)
 
 def send_interactive_menu(phone_number, previous_response):
     """Send interactive menu after showing previous results"""
@@ -232,9 +234,9 @@ def send_interactive_menu(phone_number, previous_response):
                     },
                     {
                         "type": "reply",
-                        "url": {
-                            "link": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
-                            "title": "Visit Our Website"
+                        "reply": {
+                            "id": "send_image",
+                            "title": "Business Card Image"
                         }
                     }
                 ]
@@ -243,8 +245,7 @@ def send_interactive_menu(phone_number, previous_response):
     }
     
     # Use your Meta WhatsApp Service to send the message
-    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number, interactive_message)
-
+    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number,interactive_message)
 
 def process_namecard_image(message, from_number):
     """Process business_card image (your existing logic)"""
