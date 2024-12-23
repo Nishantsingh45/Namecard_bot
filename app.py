@@ -235,7 +235,7 @@ def send_interactive_menu(phone_number, previous_response):
                         }
                     },
                     {
-                        "type": "url",
+                        "type": "reply",
                         "url": {
                             "link": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
                             "title": "Visit Our Website"
