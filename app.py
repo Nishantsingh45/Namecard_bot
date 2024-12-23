@@ -178,26 +178,14 @@ def send_initial_interactive_menu(phone_number):
             "action": {
                 "buttons": [
                     {
-                        "type": "button",
-                        "sub_type": "url",
-                        "index": "1",
-                        "parameters": [
-                            {
-                                "type": "View Contacts",
-                                "text": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}"  # Replace with your URL suffix
-                            }
-                        ]
+                        "type": "url",
+                        "action": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
+                        "title": "Export Contacts"
                     },
                     {
-                        "type": "button",
-                        "sub_type": "url",
-                        "index": "2",
-                        "parameters": [
-                            {
-                                "type": "Export Contacts",
-                                "text": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}"  # Replace with your URL suffix
-                            }
-                        ]
+                        "type": "url",
+                        "action": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
+                        "title": "View Contacts"
                     },
                     {
                         "type": "reply",
@@ -243,10 +231,10 @@ def send_interactive_menu(phone_number, previous_response):
                         }
                     },
                     {
-                        "type": "reply",
-                        "reply": {
-                            "id": "send_image",
-                            "title": "Business Card Image"
+                        "type": "url",
+                        "url": {
+                            "link": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
+                            "title": "Visit Our Website"
                         }
                     }
                 ]
@@ -255,7 +243,8 @@ def send_interactive_menu(phone_number, previous_response):
     }
     
     # Use your Meta WhatsApp Service to send the message
-    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number,interactive_message)
+    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number, interactive_message)
+
 
 def process_namecard_image(message, from_number):
     """Process business_card image (your existing logic)"""
