@@ -179,12 +179,12 @@ def send_initial_interactive_menu(phone_number):
                 "buttons": [
                     {
                         "type": "url",
-                        "url": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
+                        "action": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
                         "title": "Export Contacts"
                     },
                     {
                         "type": "url",
-                        "url": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
+                        "action": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
                         "title": "View Contacts"
                     },
                     {
