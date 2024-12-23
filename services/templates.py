@@ -29,7 +29,7 @@ def Viewproducts(phone_number):
         }
         }
     }
-    return MetaWhatsAppService.send_whatsapp_interactive_message(phone_number, interactive_message)
+    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number, interactive_message)
 
 def Exportproducts(phone_number):
     """
@@ -59,4 +59,4 @@ def Exportproducts(phone_number):
         }
         }
     }
-    return MetaWhatsAppService.send_whatsapp_interactive_message(phone_number, interactive_message)
+    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number, interactive_message)
