@@ -53,7 +53,7 @@ def Exportproducts(phone_number):
             "name": "cta_url",
             "parameters": {
                 "display_text": "Export Contacts",
-                "url":f"https://namecard-bot.vercel.app/api/contacts/{phone_number}"
+                "url":f"https://namecard-bot.vercel.app/api/contacts/{phone_number}/export"
                 
             }
         }
