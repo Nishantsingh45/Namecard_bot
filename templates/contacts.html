@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact List</title>
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<style>
+    /* Basic reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    padding: 20px;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+.contact-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.contact-card {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.contact-card h2 {
+    color: #007bff;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+.contact-card p {
+    margin-bottom: 8px;
+    font-size: 1em;
+}
+
+.contact-card p strong {
+    color: #333;
+}
+
+</style>
+<body>
+    <div class="container">
+        <h1>Contacts for {{ user.name }} ({{ user.phone }})</h1>
+        <div class="contact-list">
+            {% for contact in contacts %}
+            <div class="contact-card">
+                <h2>{{ contact.name }}</h2>
+                <p><strong>Email:</strong> {{ contact.email }}</p>
+                <p><strong>Phone:</strong> {{ contact.phone_number }}</p>
+                <p><strong>Company:</strong> {{ contact.company }}</p>
+                <p><strong>Position:</strong> {{ contact.position }}</p>
+                <p><strong>Created At:</strong> {{ contact.created_at }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
