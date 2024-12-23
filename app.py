@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,render_template
 from models import db, User, ContactInfo
 from services.meta_service import MetaWhatsAppService
 from services.image_service import AINamecardService
@@ -317,17 +317,18 @@ def view_contacts(phone):
             'position': contact.position,
             'created_at': contact.created_at.isoformat()
         })
+    return render_template('contact_list.html', user=user, contacts=contacts)
     
-    return jsonify({
-        'status': 'success',
-        'data': {
-            'user': {
-                'name': user.name,
-                'phone': user.phone
-            },
-            'contacts': contacts
-        }
-    })
+    # return jsonify({
+    #     'status': 'success',
+    #     'data': {
+    #         'user': {
+    #             'name': user.name,
+    #             'phone': user.phone
+    #         },
+    #         'contacts': contacts
+    #     }
+    # })
 
 @app.route('/api/contacts/<phone>/export', methods=['GET'])
 def export_contacts(phone):
