@@ -172,39 +172,35 @@ def send_initial_interactive_menu(phone_number):
         "type": "interactive",
         "interactive": {
             "type": "button",
+            "header": {
+                "type": "text",
+                "text": "Welcome to our service!"
+            },
             "body": {
-                "text": "Welcome! What would you like to do today?"
+                "text": "What would you like to do today?"
+            },
+            "footer": {
+                "text": "Thank you for using our service!"
             },
             "action": {
                 "buttons": [
                     {
-                        "type": "reply",
-                        "reply": {
-                            "id": "export_list",
-                            "title": "Export Contact List"
-                        }
+                        "type": "url",
+                        "text": "Exports Contacts",
+                        "url": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}"
                     },
                     {
-                        "type": "reply",
-                        "reply": {
-                            "id": "view_list",
-                            "title": "View Contact List"
-                        }
-                    },
-                    {
-                        "type": "reply",
-                        "reply": {
-                            "id": "send_image",
-                            "title": "Business Card Image"
-                        }
+                        "type": "url",
+                        "text": "View Contacts",
+                        "url": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}"
                     }
                 ]
             }
         }
     }
-    
+
     # Use your Meta WhatsApp Service to send the message
-    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number,interactive_message)
+    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number, interactive_message)
 
 def send_interactive_menu(phone_number, previous_response):
     """Send interactive menu after showing previous results"""
