@@ -317,7 +317,7 @@ def view_contacts(phone):
             'position': contact.position,
             'created_at': contact.created_at.isoformat()
         })
-    return render_template('contact_list.html', user=user, contacts=contacts)
+    return render_template('contacts.html', user=user, contacts=contacts)
     
     # return jsonify({
     #     'status': 'success',
