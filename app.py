@@ -178,14 +178,26 @@ def send_initial_interactive_menu(phone_number):
             "action": {
                 "buttons": [
                     {
-                        "type": "url",
-                        "action": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
-                        "title": "Export Contacts"
+                        "type": "button",
+                        "sub_type": "url",
+                        "index": "1",
+                        "parameters": [
+                            {
+                                "type": "View Contacts",
+                                "text": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}"  # Replace with your URL suffix
+                            }
+                        ]
                     },
                     {
-                        "type": "url",
-                        "action": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}",
-                        "title": "View Contacts"
+                        "type": "button",
+                        "sub_type": "url",
+                        "index": "2",
+                        "parameters": [
+                            {
+                                "type": "Export Contacts",
+                                "text": f"https://namecard-bot.vercel.app/api/contacts/{phone_number}"  # Replace with your URL suffix
+                            }
+                        ]
                     },
                     {
                         "type": "reply",
