@@ -17,7 +17,7 @@ def Viewproducts(phone_number):
                 "text": "View Contacts"
             },
             "body": {
-                "text": "Clicks the button below to view your contacts."
+                "text": "Click the button below to view your contacts."
             },
             "action": {
             "name": "cta_url",
@@ -47,7 +47,7 @@ def Exportproducts(phone_number):
                 "text": "Export you contacts"
             },
             "body": {
-                "text": "Clicks the button below to Export your contacts."
+                "text": "Click the button below to Export your contacts."
             },
             "action": {
             "name": "cta_url",

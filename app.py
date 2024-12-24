@@ -145,6 +145,7 @@ def webhook():
                                 Exportproducts(from_number)
                             elif button_id == 'send_image':
                                 MetaWhatsAppService.send_whatsapp_message(from_number, "Please Provide your Business Card Image to get the contact details")
+                                send_interactive_menu(from_number)
                             elif button_id == 'view_list':
                                 Viewproducts(from_number)
                     else:
@@ -193,7 +194,7 @@ def send_initial_interactive_menu(phone_number):
                         "type": "reply",
                         "reply": {
                             "id": "send_image",
-                            "title": "Business Card Image"
+                            "title": "Add Contact"
                         }
                     }
                 ]
@@ -265,25 +266,36 @@ def process_namecard_image(message, from_number):
     if card_info:
         # Create receipt entry
         result = card_info
-        with app.app_context():
-            new_contact = ContactInfo(
-            user_id=user.id,  # Assuming you're using Flask-Login or similar
-            name=result.get('name', ''),
-            email=result.get('email', ''),
-            phone_number=result.get('contact_number', ''),
-            company=result.get('company', '')
-        )
-            db.session.add(new_contact)
-            db.session.commit()
-        
         # Send success message
         if "message" in result:
             error_msg = result["message"]
             # Return or display the error message
             confirmation_msg = f"❌ {error_msg}"
         else:
-            confirmation_msg = f"🎉 Contact Saved Successfully! 🌟\n\n📇 Name: {result.get('name', 'N/A')}\n📧 Email: {result.get('email', 'N/A')}\n📞 Phone: {result.get('contact_number', 'N/A')}\n🏢 Company: {result.get('company', 'N/A')}"
-        MetaWhatsAppService.send_whatsapp_message(from_number, confirmation_msg)
+            with app.app_context():
+            # Check if a contact with the same email already exists
+                existing_contact = ContactInfo.query.filter_by(email=result.get('email', '')).first()
+                
+                if existing_contact:
+                    # Set confirmation message for existing contact
+                    confirmation_msg = "❌ This contact is already present."
+                else:
+                    # Add new contact if email is not found
+                    new_contact = ContactInfo(
+                        user_id=user.id,  # Assuming you're using Flask-Login or similar
+                        name=result.get('name', ''),
+                        email=result.get('email', ''),
+                        phone_number=result.get('contact_number', ''),
+                        company=result.get('company', '')
+                    )
+                    db.session.add(new_contact)
+                    db.session.commit()
+                    confirmation_msg = f"🎉 Contact Saved Successfully! 🌟\n\n📇 Name: {result.get('name', 'N/A')}\n📧 Email: {result.get('email', 'N/A')}\n📞 Phone: {result.get('contact_number', 'N/A')}\n🏢 Company: {result.get('company', 'N/A')}"
+        
+
+            #confirmation_msg = f"🎉 Contact Saved Successfully! 🌟\n\n📇 Name: {result.get('name', 'N/A')}\n📧 Email: {result.get('email', 'N/A')}\n📞 Phone: {result.get('contact_number', 'N/A')}\n🏢 Company: {result.get('company', 'N/A')}"
+        #MetaWhatsAppService.send_whatsapp_message(from_number, confirmation_msg)
+        send_interactive_menu(from_number, confirmation_msg)
     else:
         MetaWhatsAppService.send_whatsapp_message(from_number, "Sorry, I couldn't process your image. Please try again.")
 
