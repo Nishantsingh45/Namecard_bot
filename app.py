@@ -145,7 +145,6 @@ def webhook():
                                 Exportproducts(from_number)
                             elif button_id == 'send_image':
                                 MetaWhatsAppService.send_whatsapp_message(from_number, "Please Provide your Business Card Image to get the contact details")
-                                send_interactive_menu(from_number)
                             elif button_id == 'view_list':
                                 Viewproducts(from_number)
                     else:
