@@ -8,3 +8,5 @@ gunicorn
 supabase
 pandas
 XlsxWriter
+phonenumbers
+pycountry

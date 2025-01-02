@@ -12,6 +12,8 @@ from datetime import datetime
 from services.templates import Viewproducts, Exportproducts,sendcontact
 import os
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from phonenumbers import parse as parse_phone, geocoder, is_valid_number
+import pycountry
 
 def create_app():
     app = Flask(__name__)
@@ -113,7 +115,28 @@ def waba_verify():
 #         except Exception as e:
 #             logging.error(f"Webhook Processing Error: {e}")
 #             return jsonify(error=str(e)), 500
-
+def get_country(phone_number):
+    """
+    Get country code from phone number
+    """
+    try:
+        # Ensure the phone number starts with '+'
+        if not phone_number.startswith('+'):
+            phone_number = f"+{phone_number}"
+        
+        phone_obj = parse_phone(phone_number, None)
+        
+        # Validate phone number
+        if not is_valid_number(phone_obj):
+            return ''
+        
+        # Get country name
+        country = geocoder.country_name_for_number(phone_obj, "en")
+        return country
+    except Exception as e:
+        # Log exception if needed, for debugging
+        print(f"Error parsing phone number: {e}")
+        return ''
 from datetime import datetime, timedelta
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -130,10 +153,17 @@ def webhook():
             if 'messages' in value:
                 message = value['messages'][0]
                 from_number = message['from']
+                contact_name = None
+                country = get_country(from_number)
+                if 'contacts' in value:
+                    contact = value['contacts'][0]
+                    contact_name = contact.get('profile', {}).get('name')
                 with app.app_context():
                     user = User.query.filter_by(phone=from_number).first()
                     if not user:
-                        user = User(phone=from_number)
+                        user = User(phone=from_number,
+                                    name=contact_name,
+                                    country = country)
                         db.session.add(user)
                         db.session.commit()
                         MetaWhatsAppService.send_whatsapp_message(from_number, "Welcome! What would you like to do today?\nTo add a contact, simply take a photo or upload an image of a namecard.")
