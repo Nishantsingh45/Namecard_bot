@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Token Expired</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #2d3748;
+        }
+
+        .error-container {
+            background: white;
+            padding: 3rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            max-width: 90%;
+            width: 500px;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: #4c51bf;
+            border-radius: 50%;
+            margin: 0 auto 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo img {
+            max-width: 100%;
+            max-height: 80px; /* Set your desired maximum height */
+            width: auto; /* Maintain aspect ratio */
+            height: auto; /* Maintain aspect ratio */
+            display: block; /* Ensures proper alignment */
+            margin: 0 auto; /* Centers the image inside the container */
+            border-radius: 50%;
+        }
+
+        .logo svg {
+            width: 40px;
+            height: 40px;
+            fill: white;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: #1a202c;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        .status {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+
+        .refresh-btn {
+            background: #4c51bf;
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            margin-top: 1.5rem;
+        }
+
+        .refresh-btn:hover {
+            background: #434190;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="logo">
+            <img src="https://qeulzelzyvmjayikqxow.supabase.co/storage/v1/object/public/namecard_bucket/WhatsApp%20Image%202024-12-31%20at%203.48.50%20PM.jpeg" alt="Error Icon">
+
+        </div>
+        <h1>Authentication Error</h1>
+        <div class="error-message">
+            {{error_msg}}
+        </div>
+        <div class="status">
+            Status: Error
+        </div>
+        
+    </div>
+</body>
+</html>

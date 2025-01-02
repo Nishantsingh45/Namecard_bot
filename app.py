@@ -9,7 +9,9 @@ from flask import jsonify, send_file
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
-from services.templates import Viewproducts, Exportproducts
+from services.templates import Viewproducts, Exportproducts,sendcontact
+import os
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 def create_app():
     app = Flask(__name__)
@@ -24,6 +26,9 @@ def create_app():
     return app
 
 app = create_app()
+app.secret_key = 'namecard_aerochat'
+serializer = URLSafeTimedSerializer(app.secret_key)
+
 print("created")
 @app.route('/webhook', methods=['GET'])
 def waba_verify():
@@ -131,6 +136,9 @@ def webhook():
                         user = User(phone=from_number)
                         db.session.add(user)
                         db.session.commit()
+                        MetaWhatsAppService.send_whatsapp_message(from_number, "Welcome! What would you like to do today?\nTo add a contact, simply take a photo or upload an image of a namecard.")
+                        return jsonify(success=True), 200
+
                 # Handle different message types
                 if message.get('type') == 'text' or 'interactive' in message:
                     # Check if it's a reply to interactive buttons
@@ -142,11 +150,19 @@ def webhook():
                             
                             # Handle button selections
                             if button_id == 'export_list':
-                                Exportproducts(from_number)
-                            elif button_id == 'send_image':
-                                MetaWhatsAppService.send_whatsapp_message(from_number, "Please Provide your Business Card Image to get the contact details")
+                                export_contacts(from_number)
+                            elif button_id == 'add_contact':
+                                last_contact = get_last_contact(from_number)
+                                if last_contact:
+                                    sendcontact(from_number,last_contact)
+                                else:
+                                    MetaWhatsAppService.send_whatsapp_message(from_number, "Please Provide your Namecard Image to get the contact details")
                             elif button_id == 'view_list':
-                                Viewproducts(from_number)
+                                token = generate_token(from_number)
+                                Viewproducts(from_number,token)
+                            elif button_id == 'send_image':
+                                MetaWhatsAppService.send_whatsapp_message(from_number, "Please Provide your Namecard Image to get the contact details")
+
                     else:
                         # Initial interaction or text message
                         send_initial_interactive_menu(from_number)
@@ -171,7 +187,7 @@ def send_initial_interactive_menu(phone_number):
         "interactive": {
             "type": "button",
             "body": {
-                "text": "Welcome! What would you like to do today?"
+                "text": "Welcome! What would you like to do today?\nTo add a contact, simply take a photo or upload an image of a namecard."
             },
             "action": {
                 "buttons": [
@@ -187,13 +203,6 @@ def send_initial_interactive_menu(phone_number):
                         "reply": {
                             "id": "view_list",
                             "title": "View Contact List"
-                        }
-                    },
-                    {
-                        "type": "reply",
-                        "reply": {
-                            "id": "send_image",
-                            "title": "Add Contact"
                         }
                     }
                 ]
@@ -231,12 +240,47 @@ def send_interactive_menu(phone_number, previous_response):
                             "id": "view_list",
                             "title": "View Contact List"
                         }
+                    }
+                ]
+            }
+        }
+    }
+    
+    # Use your Meta WhatsApp Service to send the message
+    MetaWhatsAppService.send_whatsapp_interactive_message(phone_number,interactive_message)
+def send_interactive_menu_contact(phone_number, previous_response):
+    """Send interactive menu after showing previous results"""
+    interactive_message = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": phone_number,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {
+                "text": f"{previous_response}\n\nTo add another contact, simply take a photo or upload an image of a namecard.\n\nWhat would you like to do next?"
+            },
+            "action": {
+                "buttons": [
+                    {
+                        "type": "reply",
+                        "reply": {
+                            "id": "add_contact",
+                            "title": "Add Contact to Phone"
+                        }
                     },
                     {
                         "type": "reply",
                         "reply": {
-                            "id": "send_image",
-                            "title": "Business Card Image"
+                            "id": "view_list",
+                            "title": "View Contact List"
+                        }
+                    },
+                    {
+                        "type": "reply",
+                        "reply": {
+                            "id": "export_list",
+                            "title": "Export Contact List"
                         }
                     }
                 ]
@@ -246,7 +290,6 @@ def send_interactive_menu(phone_number, previous_response):
     
     # Use your Meta WhatsApp Service to send the message
     MetaWhatsAppService.send_whatsapp_interactive_message(phone_number,interactive_message)
-
 def process_namecard_image(message, from_number):
     """Process business_card image (your existing logic)"""
     media_id = message['image']['id']
@@ -269,15 +312,20 @@ def process_namecard_image(message, from_number):
         if "message" in result:
             error_msg = result["message"]
             # Return or display the error message
-            confirmation_msg = f"❌ {error_msg}"
+            confirmation_msg = f"Sorry , we can only process images of namecards. Please try uploading again. Thanks!."
+            send_interactive_menu(from_number, confirmation_msg)
         else:
             with app.app_context():
             # Check if a contact with the same email already exists
-                existing_contact = ContactInfo.query.filter_by(email=result.get('email', '')).first()
+                existing_contact = ContactInfo.query.filter(
+                        ContactInfo.email == card_info.get('email', ''),
+                        ContactInfo.user_id == user.id
+                    ).first()
                 
                 if existing_contact:
                     # Set confirmation message for existing contact
-                    confirmation_msg = "❌ This contact is already present."
+                    confirmation_msg = "This contact is already present. Try uploading again with a different contact."
+                    send_interactive_menu(from_number, confirmation_msg)
                 else:
                     # Add new contact if email is not found
                     new_contact = ContactInfo(
@@ -289,34 +337,49 @@ def process_namecard_image(message, from_number):
                     )
                     db.session.add(new_contact)
                     db.session.commit()
-                    confirmation_msg = f"🎉 Contact Saved Successfully! 🌟\n\n📇 Name: {result.get('name', 'N/A')}\n📧 Email: {result.get('email', 'N/A')}\n📞 Phone: {result.get('contact_number', 'N/A')}\n🏢 Company: {result.get('company', 'N/A')}"
-        
+                    confirmation_msg = f"Contact Saved Successfully! \n\nName: {result.get('name', 'N/A')}\nEmail: {result.get('email', 'N/A')}\nPhone: {result.get('contact_number', 'N/A')}\nCompany: {result.get('company', 'N/A')}"
+                    send_interactive_menu_contact(from_number,confirmation_msg)
 
             #confirmation_msg = f"🎉 Contact Saved Successfully! 🌟\n\n📇 Name: {result.get('name', 'N/A')}\n📧 Email: {result.get('email', 'N/A')}\n📞 Phone: {result.get('contact_number', 'N/A')}\n🏢 Company: {result.get('company', 'N/A')}"
         #MetaWhatsAppService.send_whatsapp_message(from_number, confirmation_msg)
-        send_interactive_menu(from_number, confirmation_msg)
+        #send_interactive_menu(from_number, confirmation_msg)
     else:
         MetaWhatsAppService.send_whatsapp_message(from_number, "Sorry, I couldn't process your image. Please try again.")
 
 
-
+def get_last_contact(phone):
+    user = User.query.filter_by(phone=phone).first()
+    
+    if not user:
+        return None  # User not found
+    
+    # Query the last contact information for the found user based on the creation date
+    last_contact = ContactInfo.query.filter_by(user_id=user.id).order_by(ContactInfo.created_at.desc()).first()
+    
+    return last_contact
 def get_user_by_phone(phone):
     """Helper function to get user by phone number"""
     return User.query.filter_by(phone=phone).first()
-
-@app.route('/api/contacts/<phone>', methods=['GET'])
-def view_contacts(phone):
+def generate_token(phone):
+    token = serializer.dumps(phone)
+    return token
+@app.route('/contacts/<token>', methods=['GET'])
+def view_contacts(token):
     """
     View contacts for a given user phone number
     Returns contacts list in JSON format
     """
+    try:
+        # Verify the token and check expiration (2 hours = 7200 seconds)
+        phone = serializer.loads(token, max_age=3600)
+    except SignatureExpired:
+        return render_template('error.html', error_msg='Token Expired')
+    except BadSignature:
+        return render_template('error.html', error_msg='Invalid Token')
     user = get_user_by_phone(phone)
     
     if not user:
-        return jsonify({
-            'status': 'error',
-            'message': 'User not found'
-        }), 404
+        return render_template('error.html', error_msg='User not found')
     
     contacts = []
     for contact in user.contacts:
@@ -354,48 +417,53 @@ def export_contacts(phone):
             'status': 'error',
             'message': 'User not found'
         }), 404
-    
-    # Prepare data for Excel export
-    contacts_data = []
-    for contact in user.contacts:
-        contacts_data.append({
-            'Name': contact.name,
-            'Email': contact.email,
-            'Phone Number': contact.phone_number,
-            'Company': contact.company,
-            'Position': contact.position,
-            'Created At': contact.created_at
-        })
-    
-    # Create DataFrame and export to Excel
-    df = pd.DataFrame(contacts_data)
-    
-    # Create Excel file in memory
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Contacts')
+    try:
+        # Prepare data for Excel export
+        contacts_data = []
+        for contact in user.contacts:
+            contacts_data.append({
+                'Name': contact.name,
+                'Email': contact.email,
+                'Phone Number': contact.phone_number,
+                'Company': contact.company,
+                'Position': contact.position,
+                'Created At': contact.created_at
+            })
         
-        # Auto-adjust columns' width
-        worksheet = writer.sheets['Contacts']
-        for idx, col in enumerate(df.columns):
-            series = df[col]
-            max_len = max(
-                series.astype(str).map(len).max(),
-                len(str(series.name))
-            ) + 1
-            worksheet.set_column(idx, idx, max_len)
-    
-    output.seek(0)
-    
-    # Generate filename with timestamp
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f'contacts_export_{timestamp}.xlsx'
-    
-    return send_file(
-        output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name=filename
-    )
+        # Create DataFrame and export to Excel
+        df = pd.DataFrame(contacts_data)
+        
+        # Create Excel file in memory
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='Contacts')
+            
+            # Auto-adjust columns' width
+            worksheet = writer.sheets['Contacts']
+            for idx, col in enumerate(df.columns):
+                series = df[col]
+                max_len = max(
+                    series.astype(str).map(len).max(),
+                    len(str(series.name))
+                ) + 1
+                worksheet.set_column(idx, idx, max_len)
+        
+        output.seek(0)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'contacts_export_{timestamp}.xlsx'
+        
+
+        result = Exportproducts(phone,filename,output.getvalue())
+        # return send_file(
+        #     output,
+        #     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        #     as_attachment=True,
+        #     download_name=filename
+        # )
+        return result
+    except Exception as e:
+        return f"there is some error {e}"
 if __name__ == '__main__':
     app.run(debug=True)

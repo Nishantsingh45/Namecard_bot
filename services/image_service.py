@@ -49,6 +49,7 @@ class AINamecardService:
                     "content": [
                         {"type": "text", "text": '''Extract the following information from this image: name, email, contact number, and company. Return a JSON-formatted response.
                          Note: if you think this is not a business card image, please make is_business_card to No and rest to be empty.
+                             - Do not guess or infer missing parts (e.g., do not complete the domain name for an email or a phone number ).
                         {
                             "name": "Full Name Here",
                             "email": "valid_email@example.com",

@@ -117,3 +117,25 @@ class MetaWhatsAppService:
         except Exception as e:
             logging.error(f"Unexpected WhatsApp Interactive Message Error: {e}")
             return False
+    def upload_media_to_whatsapp(file_data, filename):
+        """
+        Upload media to WhatsApp servers and get media ID
+        """
+        url = f'https://graph.facebook.com/v19.0/{os.getenv("META_WA_PHONE_NUMBER_ID")}/media'
+        
+        files = {
+            'file': (filename, file_data, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+            'type': (None, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+            'messaging_product': (None, 'whatsapp')
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {os.getenv("META_WA_TOKEN")}'
+        }
+        
+        response = requests.post(url, headers=headers, files=files)
+        
+        if response.status_code != 200:
+            raise Exception(f"Failed to upload media: {response.text}")
+        
+        return response.json().get('id')
