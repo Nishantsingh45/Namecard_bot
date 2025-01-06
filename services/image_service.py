@@ -6,7 +6,7 @@ from openai import OpenAI
 import base64
 import requests, json
 import os,json
-
+from services.meta_service import MetaWhatsAppService
 def encode_image(image_url):
     """
     Encode an image to base64
@@ -39,7 +39,7 @@ class AINamecardService:
         """
         try:
             openai.api_key = Config.OPENAI_API_KEY
-            base64_image = encode_image(image_url)
+            base64_image = MetaWhatsAppService.download_and_encode_media(image_url)
             client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
             response = client.chat.completions.create(
                 response_format={"type": "json_object"},
@@ -55,6 +55,8 @@ class AINamecardService:
                             "email": "valid_email@example.com",
                             "contact_number": "phone number of the contact",
                             "company": "Company Name",
+                            "position": "Person's Job Title or Position",
+                            "website": "company_website",
                             "is_business_card": "yes/no"
                            
                         }'''},
@@ -88,7 +90,11 @@ class AINamecardService:
                 'contact_number':
                 extracted_info.get('contact_number', ""),
                 'company':
-                extracted_info.get('company')
+                extracted_info.get('company'),
+                'position':
+                extracted_info.get('position', ""),
+                'website':
+                extracted_info.get('website', "")
             }
             return result
         except Exception as e:

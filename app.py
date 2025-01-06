@@ -332,8 +332,8 @@ def process_namecard_image(message, from_number):
             db.session.commit()
     
     # Download and process image
-    media_content = MetaWhatsAppService.download_media(media_id)
-    card_info = AINamecardService.process_namecard_image(media_content)
+    #media_content = MetaWhatsAppService.download_media(media_id)
+    card_info = AINamecardService.process_namecard_image(media_id)
     
     if card_info:
         # Create receipt entry
@@ -358,6 +358,8 @@ def process_namecard_image(message, from_number):
                     send_interactive_menu(from_number, confirmation_msg)
                 else:
                     # Add new contact if email is not found
+                    confirmation_msg = f"Contact Saved Successfully! \n\nName: {result.get('name', 'N/A')}\nEmail: {result.get('email', 'N/A')}\nPhone: {result.get('contact_number', 'N/A')}\nCompany: {result.get('company', 'N/A')}"
+                    send_interactive_menu_contact(from_number,confirmation_msg)
                     new_contact = ContactInfo(
                         user_id=user.id,  # Assuming you're using Flask-Login or similar
                         name=result.get('name', ''),
@@ -367,12 +369,8 @@ def process_namecard_image(message, from_number):
                     )
                     db.session.add(new_contact)
                     db.session.commit()
-                    confirmation_msg = f"Contact Saved Successfully! \n\nName: {result.get('name', 'N/A')}\nEmail: {result.get('email', 'N/A')}\nPhone: {result.get('contact_number', 'N/A')}\nCompany: {result.get('company', 'N/A')}"
-                    send_interactive_menu_contact(from_number,confirmation_msg)
-
-            #confirmation_msg = f"🎉 Contact Saved Successfully! 🌟\n\n📇 Name: {result.get('name', 'N/A')}\n📧 Email: {result.get('email', 'N/A')}\n📞 Phone: {result.get('contact_number', 'N/A')}\n🏢 Company: {result.get('company', 'N/A')}"
-        #MetaWhatsAppService.send_whatsapp_message(from_number, confirmation_msg)
-        #send_interactive_menu(from_number, confirmation_msg)
+                    # confirmation_msg = f"Contact Saved Successfully! \n\nName: {result.get('name', 'N/A')}\nEmail: {result.get('email', 'N/A')}\nPhone: {result.get('contact_number', 'N/A')}\nCompany: {result.get('company', 'N/A')}"
+                    # send_interactive_menu_contact(from_number,confirmation_msg)
     else:
         MetaWhatsAppService.send_whatsapp_message(from_number, "Sorry, I couldn't process your image. Please try again.")
 

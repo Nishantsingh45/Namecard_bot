@@ -2,15 +2,17 @@ import requests
 import logging
 from config import Config
 import os
+from io import BytesIO
+import base64
 class MetaWhatsAppService:
     @staticmethod
-    def download_media(media_id, save_path='/tmp'):
+    def download_and_encode_media(media_id):
         """
-        Download media from Meta WhatsApp API and save it locally.
+        Download media from Meta WhatsApp API and convert directly to base64
+        without saving to disk.
         
         :param media_id: The ID of the media to download.
-        :param save_path: The directory where the file will be saved.
-        :return: The local file path if saved successfully, None otherwise.
+        :return: Base64 encoded string if successful, None otherwise.
         """
         try:
             # Define the URL and headers
@@ -19,37 +21,34 @@ class MetaWhatsAppService:
 
             # Make the request to get the media URL
             response = requests.get(url, headers=headers)
-            if response.status_code == 200:
-                media_url = response.json().get('url')
-                if not media_url:
-                    logging.error("No media URL found in the response.")
-                    return None
-
-                # Make the request to download the media file
-                media_response = requests.get(media_url, headers=headers)
-                if media_response.status_code == 200:
-                    # Ensure the save_path directory exists
-                    os.makedirs(save_path, exist_ok=True)
-                    content_type = media_response.headers.get('Content-Type', '').lower()
-                    file_extension = content_type.split('/')[-1]
-                    # Generate the file path
-                    file_name = f"{media_id}.{file_extension}"  # Replace with proper file extension if known
-                    file_path = os.path.join(save_path, file_name)
-
-                    # Save the file locally
-                    with open(file_path, 'wb') as file:
-                        file.write(media_response.content)
-                    
-                    logging.info(f"Media file saved at: {file_path}")
-                    return file_path
-
-                logging.error(f"Failed to download media content: {media_response.status_code}")
-            else:
+            if response.status_code != 200:
                 logging.error(f"Failed to fetch media URL: {response.status_code}")
-            return None
+                return None
+
+            media_url = response.json().get('url')
+            if not media_url:
+                logging.error("No media URL found in the response.")
+                return None
+
+            # Stream the download to memory
+            media_response = requests.get(media_url, headers=headers, stream=True)
+            if media_response.status_code != 200:
+                logging.error(f"Failed to download media content: {media_response.status_code}")
+                return None
+
+            # Read content directly into memory and encode to base64
+            content = BytesIO()
+            for chunk in media_response.iter_content(chunk_size=8192):
+                if chunk:
+                    content.write(chunk)
+            
+            # Convert to base64
+            base64_encoded = base64.b64encode(content.getvalue()).decode('utf-8')
+            logging.info("Successfully downloaded and encoded media")
+            return base64_encoded
 
         except Exception as e:
-            logging.error(f"Media Download Error: {e}")
+            logging.error(f"Media Download and Encoding Error: {e}")
             return None
 
     @staticmethod
