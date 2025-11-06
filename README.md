@@ -1,1 +1,1 @@
-#NameCard bot
+#NameCard bot v2
