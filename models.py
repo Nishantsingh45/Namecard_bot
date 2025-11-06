@@ -23,4 +23,5 @@ class ContactInfo(db.Model):
     phone_number = db.Column(db.String)
     company = db.Column(db.String)
     position = db.Column(db.String)
+    website = db.Column(db.String)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

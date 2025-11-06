@@ -41,80 +41,7 @@ def waba_verify():
       return "Verification token mismatch", 403
     return request.args["hub.challenge"], 200
   return "Hello world", 200
-# @app.route('/webhook', methods=['POST'])
-# def webhook():
-#     # if request.method == 'GET':
-#     #     # Webhook verification
-#     #     if request.args.get('hub.verify_token') == Config.WEBHOOK_VERIFY_TOKEN:
-#     #         return request.args.get('hub.challenge'), 200
-#     #     return 'Invalid verification token', 403
 
-#     if request.method == 'POST':
-#         try:
-#             data = request.get_json()
-            
-#             # Extract message details
-#             message = data['entry'][0]['changes'][0]['value']['messages'][0]
-#             from_number = message['from']
-            
-#             # Check if message contains media
-#             if 'type' in message and message['type'] == 'text':
-#                 with app.app_context():
-#                     user = User.query.filter_by(phone=from_number).first()
-#                     if not user:
-#                         user = User(phone=from_number)
-#                         db.session.add(user)
-#                         db.session.commit()
-#                 MetaWhatsAppService.send_whatsapp_message(from_number, "Please Provide your contact card Image to get the contact details")
-#             if 'type' in message and message['type'] == 'image':
-#                 media_id = message['image']['id']
-                
-#                 # Find or create user
-#                 with app.app_context():
-#                     user = User.query.filter_by(phone=from_number).first()
-#                     if not user:
-#                         user = User(phone=from_number)
-#                         db.session.add(user)
-#                         db.session.commit()
-                
-#                 # Download and process image
-#                 media_content = MetaWhatsAppService.download_media(media_id)
-#                 print(media_content)
-#                 # storage_service = SupabaseStorageService()
-#                 # image_url = storage_service.upload_image(media_content)
-#                 # Process receipt
-#                 card_info = AINamecardService.process_namecard_image(media_content)
-#                 print(card_info)
-#                 if card_info:
-#                     # Create receipt entry
-#                     result = card_info
-#                     with app.app_context():
-#                         new_contact = ContactInfo(
-#                         user_id=user.id,  # Assuming you're using Flask-Login or similar
-#                         name=result.get('name', ''),
-#                         email=result.get('email', ''),
-#                         phone_number=result.get('contact_number', ''),
-#                         company=result.get('company', '')
-#                     )
-#                         db.session.add(new_contact)
-#                         db.session.commit()
-                    
-#                     # Send success message
-#                     if "message" in result:
-#                         error_msg = result["message"]
-#                         # Return or display the error message
-#                         confirmation_msg = f"❌ {error_msg}"
-#                     else:
-#                         confirmation_msg = f"🎉 Contact Saved Successfully! 🌟\n\n📇 Name: {result.get('name', 'N/A')}\n📧 Email: {result.get('email', 'N/A')}\n📞 Phone: {result.get('contact_number', 'N/A')}\n🏢 Company: {result.get('company', 'N/A')}"
-#                     MetaWhatsAppService.send_whatsapp_message(from_number, confirmation_msg)
-#                 else:
-#                     MetaWhatsAppService.send_whatsapp_message(from_number, "Sorry, I couldn't process your image. Please try again.")
-            
-#             return jsonify(success=True), 200
-        
-#         except Exception as e:
-#             logging.error(f"Webhook Processing Error: {e}")
-#             return jsonify(error=str(e)), 500
 def get_country(phone_number):
     """
     Get country code from phone number
@@ -138,6 +65,9 @@ def get_country(phone_number):
         print(f"Error parsing phone number: {e}")
         return ''
 from datetime import datetime, timedelta
+from services.meta_service import MetaWhatsAppService
+from services.audio_service import transcribe_whatsapp_audio,save_transcript_as_docx
+from services.templates import Exporttranscript
 @app.route('/webhook', methods=['POST'])
 def webhook():
     if request.method == 'POST':
@@ -152,6 +82,7 @@ def webhook():
             # Determine message type
             if 'messages' in value:
                 message = value['messages'][0]
+                message_id = message['id']
                 from_number = message['from']
                 contact_name = None
                 country = get_country(from_number)
@@ -172,6 +103,7 @@ def webhook():
                 # Handle different message types
                 if message.get('type') == 'text' or 'interactive' in message:
                     # Check if it's a reply to interactive buttons
+                    MetaWhatsAppService.send_typing_indicator(from_number,message_id)
                     if 'interactive' in message:
                         interactive_type = message['interactive'].get('type')
                         
@@ -201,7 +133,39 @@ def webhook():
                 elif message.get('type') == 'image':
                     # Your existing image processing code here
                     process_namecard_image(message, from_number)
-            
+                elif message.get('type') == 'audio':
+                    audio_data = message.get('audio', {})
+                    media_id = audio_data.get('id')
+                    if not media_id:
+                        print("no media_id")
+                        return jsonify({"error": "Media ID not provided in the voice message"}), 400
+
+                    # Download the audio file from WhatsApp
+                    try:
+                        transcript_text = transcribe_whatsapp_audio(media_id)
+                        print(transcript_text)
+                        # Save the transcript as a text file (adjust storage path as needed).
+                        timestamp = datetime.now().strftime("%d %b, %-I.%M %p")  # Use %-I for removing leading zero in hour (Linux/macOS)
+                        transcript_filename = f"{timestamp}.txt"
+
+                        # For Windows compatibility (doesn't support %-I)
+                        if transcript_filename.startswith("0"):
+                            transcript_filename = transcript_filename[1:]
+                        with open(transcript_filename, 'w', encoding="utf-8") as txt_file:
+                            txt_file.write(transcript_text)
+                        #transcript_filename = save_transcript_as_docx(from_number, transcript_text)
+                        # Now read the transcript file data and upload it to WhatsApp.
+                        with open(transcript_filename, 'rb') as file_obj:
+                            file_data = file_obj.read()
+
+                        # Upload the transcript text file using the helper function.
+                        response = Exporttranscript(from_number,transcript_filename,file_data,transcript_filename)
+                        # Optionally, delete the transcript file if it's no longer needed.
+                        os.remove(transcript_filename)
+                    except:
+                        MetaWhatsAppService.send_whatsapp_message(from_number, "Sorry we are unable to Help you at the moment. Please try again later.")
+                    
+
             return jsonify(success=True), 200
         
         except Exception as e:
@@ -341,16 +305,46 @@ def process_namecard_image(message, from_number):
         # Send success message
         if "message" in result:
             error_msg = result["message"]
+            normal_info = AINamecardService.process_NORMAL_image(media_id)
             # Return or display the error message
-            confirmation_msg = f"Sorry , we can only process images of namecards. Please try uploading again. Thanks!."
-            send_interactive_menu(from_number, confirmation_msg)
+            #confirmation_msg = f"Sorry , we can only process images of namecards. Please try uploading again. Thanks!."
+            #send_interactive_menu(from_number, confirmation_msg)
+            timestamp = datetime.now().strftime("%d %b, %-I.%M %p")  # Use %-I for removing leading zero in hour (Linux/macOS)
+            transcript_filename = f"{timestamp}.txt"
+
+            # For Windows compatibility (doesn't support %-I)
+            if transcript_filename.startswith("0"):
+                transcript_filename = transcript_filename[1:]
+            with open(transcript_filename, 'w', encoding="utf-8") as txt_file:
+                txt_file.write(normal_info)
+            #transcript_filename = save_transcript_as_docx(from_number, transcript_text)
+            # Now read the transcript file data and upload it to WhatsApp.
+            with open(transcript_filename, 'rb') as file_obj:
+                file_data = file_obj.read()
+
+            # Upload the transcript text file using the helper function.
+            confirmation_msg = f'You can download the below file to read the content of image'
+            MetaWhatsAppService.send_whatsapp_message(from_number, confirmation_msg)
+            response = Exporttranscript(from_number,transcript_filename,file_data,transcript_filename)
+            send_interactive_menu(from_number, '')
+            # Optionally, delete the transcript file if it's no longer needed.
+            os.remove(transcript_filename)
+            
         else:
             with app.app_context():
             # Check if a contact with the same email already exists
-                existing_contact = ContactInfo.query.filter(
-                        ContactInfo.email == card_info.get('email', ''),
+                if card_info.get('email'):
+                    existing_contact = ContactInfo.query.filter(
+                            ContactInfo.email == card_info.get('email'),
+                            ContactInfo.user_id == user.id
+                        ).first()
+                else:
+                    existing_contact = ContactInfo.query.filter(
+                        ContactInfo.phone_number.op('~')(f'\\m{card_info.get("contact_number")}\\M'),
                         ContactInfo.user_id == user.id
                     ).first()
+
+
                 
                 if existing_contact:
                     # Set confirmation message for existing contact
@@ -359,13 +353,20 @@ def process_namecard_image(message, from_number):
                 else:
                     # Add new contact if email is not found
                     confirmation_msg = f"Contact Saved Successfully! \n\nName: {result.get('name', 'N/A')}\nEmail: {result.get('email', 'N/A')}\nPhone: {result.get('contact_number', 'N/A')}\nCompany: {result.get('company', 'N/A')}"
+                    if 'position' in result:
+                        confirmation_msg += f"\nPosition: {result['position']}"
+                    if 'website' in result:
+                        confirmation_msg += f"\nWebsite: {result['website']}"
                     send_interactive_menu_contact(from_number,confirmation_msg)
+                    result_name = result.get('name') or result.get('company') or ""
                     new_contact = ContactInfo(
                         user_id=user.id,  # Assuming you're using Flask-Login or similar
-                        name=result.get('name', ''),
+                        name= result_name,#result.get('name', ''),
                         email=result.get('email', ''),
                         phone_number=result.get('contact_number', ''),
-                        company=result.get('company', '')
+                        company=result.get('company', ''),
+                        position = result.get('position',''),
+                        website = result.get('website','')
                     )
                     db.session.add(new_contact)
                     db.session.commit()
@@ -417,6 +418,7 @@ def view_contacts(token):
             'phone_number': contact.phone_number,
             'company': contact.company,
             'position': contact.position,
+            'website': contact.website,
             'created_at': contact.created_at.isoformat()
         })
     return render_template('contacts.html', user=user, contacts=contacts)
@@ -493,5 +495,129 @@ def export_contacts(phone):
         return result
     except Exception as e:
         return f"there is some error {e}"
+    
+
+
+
+
+from flask import Flask, request, jsonify, render_template
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
+load_dotenv()
+client = OpenAI(os.getenv("OPENAI_API_KEY"))
+
+response_id = None
+@app.route('/')
+def index():
+    global response_id
+    response_id = None  # Reset on refresh or new visit
+    return render_template('index.html')
+# response_id = None
+@app.route('/chat', methods=['POST'])
+def chat():
+    global response_id
+    user_input = request.json.get('message')
+
+    try:
+        if response_id:
+            response = client.responses.create(
+                model="gpt-4.1",
+                previous_response_id=response_id,
+                input=user_input,
+                tool_choice="required",
+                tools=[
+                    {
+                        "type": "mcp",
+                        "server_label": "shopify",
+                        "server_url": "https://breadgarden.myshopify.com/api/mcp",
+                        "require_approval": "never"
+                    }
+                ],
+            )
+        else:
+            response = client.responses.create(
+            model="gpt-4.1",
+            previous_response_id=response_id,
+            input=user_input,
+            tool_choice="required",
+            tools=[
+                {
+                    "type": "mcp",
+                    "server_label": "shopify",
+                    "server_url": "https://breadgarden.myshopify.com/api/mcp",
+                    "require_approval": "never"
+                }
+            ],
+        )
+
+        output_text = ""
+        for item in response.output:
+            response_id = response.id
+            if getattr(item, "role", None) == "assistant" and getattr(item, "type", None) == "message":
+                for content_item in item.content:
+                    if getattr(content_item, "type", None) == "output_text":
+                        output_text = content_item.text
+                        break
+
+        return jsonify({"response": output_text})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/ecom')
+def index_ecom():
+    global response_id
+    response_id = None  # Reset on refresh or new visit
+    return render_template('index_ecom.html')
+# response_id = None
+@app.route('/chat_ecom', methods=['POST'])
+def chat_ecom():
+    global response_id
+    user_input = request.json.get('message')
+
+    try:
+        if response_id:
+            response = client.responses.create(
+                model="gpt-4.1",
+                previous_response_id=response_id,
+                input=user_input,
+                tool_choice="required",
+                tools=[
+                    {
+                        "type": "mcp",
+                        "server_label": "shopify",
+                        "server_url": "https://ecomtestac.myshopify.com/api/mcp",
+                        "require_approval": "never"
+                    }
+                ],
+            )
+        else:
+            response = client.responses.create(
+            model="gpt-4.1",
+            previous_response_id=response_id,
+            input=user_input,
+            tool_choice="required",
+            tools=[
+                {
+                    "type": "mcp",
+                    "server_label": "shopify",
+                    "server_url": "https://ecomtestac.myshopify.com/api/mcp",
+                    "require_approval": "never"
+                }
+            ],
+        )
+
+        output_text = ""
+        for item in response.output:
+            response_id = response.id
+            if getattr(item, "role", None) == "assistant" and getattr(item, "type", None) == "message":
+                for content_item in item.content:
+                    if getattr(content_item, "type", None) == "output_text":
+                        output_text = content_item.text
+                        break
+
+        return jsonify({"response": output_text})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 if __name__ == '__main__':
     app.run(debug=True)

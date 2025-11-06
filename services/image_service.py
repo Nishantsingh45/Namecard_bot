@@ -90,15 +90,53 @@ class AINamecardService:
                 'contact_number':
                 extracted_info.get('contact_number', ""),
                 'company':
-                extracted_info.get('company'),
-                'position':
-                extracted_info.get('position', ""),
-                'website':
-                extracted_info.get('website', "")
+                extracted_info.get('company')
             }
+            position = extracted_info.get('position')
+            if position:
+                result['position'] = position
+            website = extracted_info.get('website')
+            if website:
+                result['website'] = website
             return result
         except Exception as e:
             logging.error(f"Image Parsing Error: {e}")
+            return None
+    @staticmethod
+    def process_NORMAL_image(image_url):
+        """
+        Process NORMAL image using OpenAI Vision
+        """
+        try:
+            openai.api_key = Config.OPENAI_API_KEY
+            base64_image = MetaWhatsAppService.download_and_encode_media(image_url)
+            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            response = client.chat.completions.create(
+                response_format={"type": "json_object"},
+                model=Config.OPENAI_MODEL,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": '''Extract the following text from this image:
+                         -Keep the language same as the text in the image.
+                            -Do not guess or infer missing parts.
+                         -Keep the text in the same order as it appears in the image.
+                            -Return a JSON-formatted response.
+                        {
+                         text: "Extracted text from the image"
+                         }
+                           
+                        }'''},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                    ]
+                }]
+            )
+            
+            #receipt_text = response.choices[0].message.content
+            content = json.loads(response.choices[0].message.content)
+            return content.get('text')
+        except Exception as e:
+            logging.error(f"OpenAI Processing Error: {e}")
             return None
 
     

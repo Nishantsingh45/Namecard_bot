@@ -23,7 +23,7 @@ def Viewproducts(phone_number,token):
             "name": "cta_url",
             "parameters": {
                 "display_text": "View Contacts",
-                "url":f"https://namecard.goboxme.com/contacts/{token}"
+                "url":f"https://namecard-bot.onrender.com/contacts/{token}"
                 
             }
         }
@@ -43,7 +43,7 @@ def Exportproducts(phone_number,filename,file_data):
             "to": phone_number,
             "type": "document",
             "document": {
-                #"link": f"https://namecard.goboxme.com/temp/{filename}", 
+                #"link": f"https://namecard-bot.onrender.com/temp/{filename}", 
                 "id": media_id, # Replace with the actual hosted file link
                 "filename": filename,
                 "caption": "Here are your exported contacts."
@@ -93,5 +93,30 @@ def sendcontact(phone_number,last_contact):
             ]
             }
     MetaWhatsAppService.send_whatsapp_interactive_message(phone_number, interactive_message)
+
+
+
+def Exporttranscript(phone_number,filename,file_data,caption):
+    """
+    Send interactive message to view products
+    """
+    try:
+        media_id = MetaWhatsAppService.upload_media_to_whatsapp(file_data,filename)
+        message_payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": phone_number,
+            "type": "document",
+            "document": {
+                #"link": f"https://namecard-bot.onrender.com/temp/{filename}", 
+                "id": media_id, # Replace with the actual hosted file link
+                "filename": filename,
+                "caption": caption
+            }
+        }
+        MetaWhatsAppService.send_whatsapp_interactive_message(phone_number, message_payload)
+        return "Message send successfully"
+    except Exception as e:
+        return f"error while exporting file {e}"
 
     

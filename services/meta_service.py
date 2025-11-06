@@ -4,6 +4,8 @@ from config import Config
 import os
 from io import BytesIO
 import base64
+import tempfile
+import mimetypes
 class MetaWhatsAppService:
     @staticmethod
     def download_and_encode_media(media_id):
@@ -116,17 +118,53 @@ class MetaWhatsAppService:
         except Exception as e:
             logging.error(f"Unexpected WhatsApp Interactive Message Error: {e}")
             return False
+    @staticmethod
+    def send_typing_indicator(phone_number,message_id):
+        """
+        Send 'typing' indicator to WhatsApp user via Meta API
+        """
+        try:
+            url = f"https://graph.facebook.com/v18.0/{Config.META_WA_PHONE_NUMBER_ID}/messages"
+
+            payload = {
+                "messaging_product": "whatsapp",
+                "status": "read",
+                "message_id": message_id,
+                "typing_indicator": {
+                    "type": "text"
+                }
+            }
+
+            headers = {
+                "Authorization": f"Bearer {Config.META_WA_TOKEN}",
+                "Content-Type": "application/json"
+            }
+
+            response = requests.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            return True
+        except Exception as e:
+            logging.error(f"WhatsApp Typing Indicator Error: {e}")
+            return False
     def upload_media_to_whatsapp(file_data, filename):
         """
         Upload media to WhatsApp servers and get media ID
         """
         url = f'https://graph.facebook.com/v19.0/{os.getenv("META_WA_PHONE_NUMBER_ID")}/media'
-        
+        guessed_type, _ = mimetypes.guess_type(filename)
+        if not guessed_type:
+            # Fall back to a generic binary if not found
+            guessed_type = 'application/octet-stream'
         files = {
-            'file': (filename, file_data, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
-            'type': (None, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+            'file': (filename, file_data, guessed_type),
+            'type': (None, guessed_type),  # important to match the same MIME here
             'messaging_product': (None, 'whatsapp')
         }
+        # files = {
+        #     'file': (filename, file_data, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+        #     'type': (None, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+        #     'messaging_product': (None, 'whatsapp')
+        # }
         
         headers = {
             'Authorization': f'Bearer {os.getenv("META_WA_TOKEN")}'
@@ -138,3 +176,102 @@ class MetaWhatsAppService:
             raise Exception(f"Failed to upload media: {response.text}")
         
         return response.json().get('id')
+
+
+
+    # def download_whatsapp_audio(media_id: str) -> str:
+    #     """
+    #     Download the WhatsApp audio file using the WhatsApp API.
+
+    #     Args:
+    #         media_id (str): The media ID from the WhatsApp message.
+
+    #     Returns:
+    #         str: The file path to the downloaded audio file.
+    #     """
+    #     # WhatsApp API configuration
+    #     whatsapp_api_token = os.getenv("META_WA_TOKEN")
+    #     if not whatsapp_api_token:
+    #         raise Exception("WhatsApp API token not configured")
+        
+    #     # Adjust the WhatsApp API URL as required by your provider.
+    #     whatsapp_api_url = f"https://graph.facebook.com/v18.0/{media_id}"
+    #     headers = {"Authorization": f"Bearer {whatsapp_api_token}"}
+
+    #     # Get the media URL from the WhatsApp API
+    #     response = requests.get(whatsapp_api_url, headers=headers, timeout=10)
+    #     response.raise_for_status()
+    #     data = response.json()
+    #     media_url = data.get("url")
+    #     if not media_url:
+    #         raise Exception("Could not retrieve media URL from WhatsApp API")
+
+    #     # Download the audio file to a temporary file.
+    #     # Adjust the suffix to the correct audio file format if needed.
+    #     with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as tmp_voice:
+    #         audio_response = requests.get(media_url, stream=True, timeout=10)
+    #         audio_response.raise_for_status()
+    #         for chunk in audio_response.iter_content(chunk_size=8192):
+    #             if chunk:
+    #                 tmp_voice.write(chunk)
+    #         temp_voice_path = tmp_voice.name
+
+    #     return temp_voice_path
+    def download_whatsapp_audio(media_id):
+        """
+        Download the WhatsApp audio file using the WhatsApp Cloud API.
+
+        Args:
+            media_id (str): The media ID from the WhatsApp message.
+
+        Returns:
+            Optional[str]: The file path to the downloaded audio file, or None if download fails.
+        """
+        try:
+            # WhatsApp API configuration
+            whatsapp_api_token = os.getenv("META_WA_TOKEN")
+            if not whatsapp_api_token:
+                raise ValueError("WhatsApp API token not configured")
+            
+            # First request: Get the media URL
+            whatsapp_api_url = f"https://graph.facebook.com/v18.0/{media_id}"
+            headers = {
+                "Authorization": f"Bearer {whatsapp_api_token}",
+                "Accept": "application/json"
+            }
+
+            response = requests.get(whatsapp_api_url, headers=headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            media_url = data.get("url")
+            if not media_url:
+                raise ValueError("Could not retrieve media URL from WhatsApp API")
+
+            # Second request: Download the actual media file
+            # Note: We need to use the same authorization header for the media download
+            with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as tmp_file:
+                audio_response = requests.get(
+                    media_url, 
+                    headers=headers,  # Using same authorization headers
+                    stream=True, 
+                    timeout=10
+                )
+                audio_response.raise_for_status()
+                
+                for chunk in audio_response.iter_content(chunk_size=8192):
+                    if chunk:
+                        tmp_file.write(chunk)
+                        tmp_file.flush()  # Ensure data is written to disk
+                
+                return tmp_file.name
+
+        except requests.exceptions.RequestException as e:
+            print(f"Network error during WhatsApp audio download: {str(e)}")
+            return None
+        except ValueError as e:
+            print(f"Configuration error: {str(e)}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error during WhatsApp audio download: {str(e)}")
+            return None
