@@ -46,55 +46,19 @@ def transcribe_whatsapp_audio(media_id):
         if not os.path.exists(temp_voice_path):
             raise FileNotFoundError(f"Audio file not found at {temp_voice_path}")
 
-        # 2. Try transcribing with Deepgram (using your new approach)
-        try:
-            deepgram_client = DeepgramClient("4c5ccfa7f083beb2b5b0d95703f9406a8cc9d668")
-
-            # Open the audio file, read into a buffer
-            with open(temp_voice_path, "rb") as file:
-                buffer_data = file.read()
-
-            # Prepare the FileSource payload for Deepgram
-            payload: FileSource = {"buffer": buffer_data}
-
-            # Configure Deepgram transcription options
-            # Change "nova-2" to any other model name if needed
-            # Add or remove options (e.g., language, punctuation) as required
-            options = PrerecordedOptions(
-                model="nova-2",
-                smart_format=True,
-                # More advanced options you can add: 
-                # language="en", tiers=["enhanced"], multichannel=False, etc.
-            )
-
-            # Call Deepgram’s transcribe_file method
-            response = deepgram_client.listen.rest.v("1").transcribe_file(payload, options)
-
-            # Deepgram’s transcript text typically found here:
-            deepgram_transcript = response.results.channels[0].alternatives[0].transcript
-            
-            if deepgram_transcript and deepgram_transcript.strip():
-                # If Deepgram transcription is non-empty, return it
-                print("Deepgram transcription successful.")
-                return deepgram_transcript
-            else:
-                # If Deepgram gave an empty result, fallback to OpenAI
-                print("Deepgram transcription is empty. Falling back to OpenAI Whisper...")
-
-        except Exception as dg_error:
-            # If there's an error with Deepgram, log it and fallback to OpenAI
-            print(f"Deepgram error: {dg_error}. Falling back to OpenAI Whisper...")
-
-        # 3. Fallback to OpenAI Whisper if Deepgram gave an empty result or failed
+        # 2. Transcribe using OpenAI Whisper only
         with open(temp_voice_path, "rb") as audio_file:
             transcription = client.audio.transcriptions.create(
                 model="whisper-1", 
                 file=audio_file
             )
-            # Return the transcribed text
-            transcript_text = transcription.text
-            print("Transcription successful.")
-            return transcript_text
+            transcript_text = transcription.text.strip()
+
+            if transcript_text:
+                print("OpenAI Whisper transcription successful.")
+                return transcript_text
+            else:
+                raise Exception("Whisper returned an empty transcription.")
 
     except FileNotFoundError as e:
         raise Exception(f"File error: {e}")
