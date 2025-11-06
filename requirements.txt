@@ -10,3 +10,4 @@ pandas
 XlsxWriter
 phonenumbers
 pycountry
+python-docx
