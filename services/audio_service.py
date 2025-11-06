@@ -1,7 +1,7 @@
 import os
 from services.meta_service import MetaWhatsAppService
 from openai import OpenAI
-from deepgram import DeepgramClient, PrerecordedOptions, FileSource
+#from deepgram import DeepgramClient, PrerecordedOptions, FileSource
 client = OpenAI()
 #DEEPGRAM_API_KEY = "4c5ccfa7f083beb2b5b0d95703f9406a8cc9d668"
 #dg_client = Deepgram(DEEPGRAM_API_KEY)
