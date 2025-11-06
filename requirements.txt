@@ -6,3 +6,7 @@ python-dotenv
 psycopg2-binary
 gunicorn
 supabase
+pandas
+XlsxWriter
+phonenumbers
+pycountry

@@ -10,6 +10,7 @@ class User(db.Model):
     phone = db.Column(db.String, unique=True, nullable=False)
     name = db.Column(db.String)
     image = db.Column(db.String)
+    country = db.Column(db.String)  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     contacts = db.relationship('ContactInfo', backref='user', lazy=True)
 
@@ -22,4 +23,5 @@ class ContactInfo(db.Model):
     phone_number = db.Column(db.String)
     company = db.Column(db.String)
     position = db.Column(db.String)
+    website = db.Column(db.String)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
